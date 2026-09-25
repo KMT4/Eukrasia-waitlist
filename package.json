@@ -1,0 +1,28 @@
+{
+  "name": "eukrasia-waitlist-preview",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "vercel-build": "node scripts/setup-db.mjs && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "db:setup": "node scripts/setup-db.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/auth": "^0.5.0-beta",
+    "@neondatabase/serverless": "^1.0.2",
+    "next": "16.3.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.35.0",
+    "eslint-config-next": "16.3.4",
+    "typescript": "^5.9.2"
+  }
+}

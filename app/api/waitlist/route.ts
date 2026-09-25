@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { database } from "@/lib/db";
+import { validateWaitlistSubmission } from "@/lib/validation";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const validated = validateWaitlistSubmission(body);
+    if (!validated.ok) return NextResponse.json({ error: validated.message }, { status: 400 });
+    if (validated.spam) return NextResponse.json({ success: true });
+
+    const sql = database();
+    const entry = validated.data;
+    await sql`
+      insert into public.waitlist_entries (
+        full_name, email, phone, country_name, audience, organization_name,
+        journey_interest, preferred_contact, preferred_language, message,
+        source, consent_version, consented_at
+      ) values (
+        ${entry.fullName}, ${entry.email}, ${entry.phone}, ${entry.country},
+        ${entry.audience}, ${entry.organization}, ${entry.interest},
+        ${entry.preferredContact}, ${entry.preferredLanguage}, ${entry.message},
+        'website', '2026-09', now()
+      )
+      on conflict (lower(email)) do nothing
+    `;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Waitlist submission failed", error instanceof Error ? error.message : "Unknown error");
+    return NextResponse.json({ error: "We could not save your place. Please try again." }, { status: 500 });
+  }
+}
