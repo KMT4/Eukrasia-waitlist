@@ -99,13 +99,18 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/admin/entries", { cache: "no-store" });
-    if (response.status === 401) { setAuthenticated(false); return; }
-    const data = (await response.json()) as { entries?: Entry[]; updates?: ActivityUpdate[]; error?: string };
-    if (!response.ok) { setError(data.error ?? "Could not load the waitlist."); return; }
-    setEntries(data.entries ?? []);
-    setUpdates(data.updates ?? []);
-    setAuthenticated(true);
+    try {
+      const response = await fetch("/api/admin/entries", { cache: "no-store" });
+      if (response.status === 401) { setAuthenticated(false); return; }
+      const data = (await response.json()) as { entries?: Entry[]; updates?: ActivityUpdate[]; error?: string };
+      if (!response.ok) { setError(data.error ?? "Could not load the waitlist."); setAuthenticated(false); return; }
+      setEntries(data.entries ?? []);
+      setUpdates(data.updates ?? []);
+      setAuthenticated(true);
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
+      setAuthenticated(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -268,7 +273,7 @@ export default function AdminPage() {
             <div className="entry-main">
               <div className="entry-title"><div><span className={`status-pill status-${entry.status}`}>{titleCase(entry.status)}</span><h3>{entry.full_name}</h3><a href={`mailto:${entry.email}`}>{entry.email}</a></div><time><Icon name="clock" size={14} />{new Date(entry.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time></div>
               <dl><div><dt>Country</dt><dd>{entry.country_name || "—"}</dd></div><div><dt>Audience</dt><dd>{titleCase(entry.audience)}</dd></div><div><dt>Interest</dt><dd>{titleCase(entry.journey_interest)}</dd></div><div><dt>Preferred contact</dt><dd>{titleCase(entry.preferred_contact)}{entry.phone ? ` · ${entry.phone}` : ""}</dd></div></dl>
-              {entry.organization_name && <p><strong>Organisation</strong>{entry.organization_name}</p>}{entry.message && <blockquote>“{entry.message}”</blockquote>}
+              {entry.organization_name && <p><strong>Organisation</strong>{entry.organization_name}</p>}{entry.message && <blockquote>"{entry.message}"</blockquote>}
               <div className="manage-row"><label>Status<select value={entry.status} onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, status: event.target.value } : item))}>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label><label>Internal note<input value={entry.internal_note} maxLength={2000} placeholder="Add a private follow-up note…" onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, internal_note: event.target.value } : item))} /></label><button className="save-record" onClick={() => void update(entry)}>Save changes</button><button className="danger" onClick={() => void remove(entry)}>Delete</button></div>
             </div>
           </article>)}</div>

@@ -1,8 +1,8 @@
 export const WAITLIST_STATUSES = ["new", "contacted", "qualified", "invited", "archived"] as const;
 export type WaitlistStatus = (typeof WAITLIST_STATUSES)[number];
 
-const AUDIENCES = ["pilgrim", "operator", "healthcare", "partner", "caregiver", "other"];
-const INTERESTS = ["hajj", "umrah", "operator-pilot", "healthcare-partnership", "launch-updates"];
+const AUDIENCES = ["individual", "healthcare", "chw", "institution", "partner", "other"];
+const INTERESTS = ["early-access", "healthcare-partnership", "institutional-partnership", "chw-programme", "launch-updates"];
 const CONTACT_METHODS = ["email", "whatsapp", "phone"];
 
 function text(value: unknown, max: number) {

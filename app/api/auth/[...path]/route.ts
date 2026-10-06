@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { authBaseUrl, isApprovedAdminEmail } from "@/lib/admin-auth";
 
 type AuthContext = { params: Promise<{ path: string[] }> };
-const PRODUCTION_ORIGIN = "https://eukrasia-waitlist-preview.vercel.app";
 
-function neonTrustedOrigin() {
-  return PRODUCTION_ORIGIN;
+function neonTrustedOrigin(request: Request) {
+  return request.headers.get("origin") ?? new URL(request.url).origin;
 }
 
 async function approvedEmailRequest(request: Request, context: AuthContext) {
@@ -52,7 +51,7 @@ async function proxyToNeon(request: Request, context: AuthContext) {
   const cookie = request.headers.get("cookie");
   if (contentType) headers.set("content-type", contentType);
   if (cookie) headers.set("cookie", cookie);
-  headers.set("origin", neonTrustedOrigin());
+  headers.set("origin", neonTrustedOrigin(request));
   headers.set("accept", "application/json");
 
   const upstream = await fetch(upstreamUrl, {
