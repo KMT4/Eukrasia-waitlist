@@ -6,7 +6,7 @@ create table if not exists public.waitlist_entries (
   email text not null check (char_length(email) between 5 and 254),
   phone text not null default '' check (char_length(phone) <= 32),
   country_name text check (char_length(country_name) between 2 and 100),
-  audience text not null check (audience in ('individual','healthcare','organization','partner')),
+  audience text check (audience in ('individual','healthcare','organization','partner')),
   organization_name text not null default '' check (char_length(organization_name) <= 160),
   journey_interest text check (journey_interest in ('early-access','healthcare-partnership','institutional-partnership','chw-programme','launch-updates')),
   preferred_contact text check (preferred_contact in ('email','whatsapp','phone')),
@@ -24,6 +24,7 @@ create table if not exists public.waitlist_entries (
 
 -- Keep older registration details intact while making the shorter signup valid.
 alter table public.waitlist_entries alter column country_name drop not null;
+alter table public.waitlist_entries alter column audience drop not null;
 alter table public.waitlist_entries alter column journey_interest drop not null;
 alter table public.waitlist_entries alter column preferred_contact drop not null;
 alter table public.waitlist_entries drop constraint if exists waitlist_entries_audience_check;
@@ -32,7 +33,8 @@ update public.waitlist_entries set audience = case
   when audience in ('institution', 'organization') then 'organization'
   when audience in ('partner') then 'partner'
   else 'individual'
-end;
+end
+where audience is not null;
 alter table public.waitlist_entries add constraint waitlist_entries_audience_check
   check (audience in ('individual','healthcare','organization','partner'));
 

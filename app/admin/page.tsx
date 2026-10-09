@@ -9,7 +9,7 @@ type Entry = {
   id: string;
   full_name: string;
   email: string;
-  audience: string;
+  phone: string;
   source: string;
   consent_version: string;
   consented_at: string;
@@ -38,7 +38,7 @@ type ActivityUpdate = {
   created_at: string;
 };
 
-type IconName = "grid" | "people" | "activity" | "download" | "search" | "shield" | "globe" | "spark" | "logout" | "arrow" | "mail" | "clock";
+type IconName = "grid" | "people" | "activity" | "download" | "search" | "shield" | "globe" | "spark" | "logout" | "arrow" | "mail" | "clock" | "phone";
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -54,6 +54,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     arrow: <><path d="m9 18 6-6-6-6"/></>,
     mail: <><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
+    phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 8.9a16 16 0 0 0 6 6l1.2-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.8 2.1Z"/>,
   };
   return <svg aria-hidden="true" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
@@ -89,6 +90,8 @@ function activityDescription(update: ActivityUpdate, entries: Entry[]) {
 }
 
 function ContactAction({ entry }: { entry: Entry }) {
+  const phone = entry.phone.replace(/[^\d+]/g, "");
+  if (phone) return <a className="contact-action" href={`tel:${phone}`} aria-label={`Call ${entry.full_name}`}><Icon name="phone" size={15} /><span>Call</span></a>;
   return <a className="contact-action" href={`mailto:${encodeURIComponent(entry.email)}`} aria-label={`Email ${entry.full_name}`}>
     <Icon name="mail" size={15} />
     <span>Email</span>
@@ -159,7 +162,7 @@ export default function AdminPage() {
     return entries.filter((entry) => {
       const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
       const searchable = [
-        entry.full_name, entry.email, entry.audience, entry.internal_note, entry.source, entry.status,
+        entry.full_name, entry.email, entry.phone, entry.internal_note, entry.source, entry.status,
       ].join(" ").toLowerCase();
       return matchesStatus && (!needle || searchable.includes(needle));
     });
@@ -169,7 +172,7 @@ export default function AdminPage() {
     new: entries.filter((entry) => entry.status === "new").length,
     contacted: entries.filter((entry) => entry.status === "contacted").length,
     qualified: entries.filter((entry) => entry.status === "qualified" || entry.status === "invited").length,
-    groups: new Set(entries.map((entry) => entry.audience).filter(Boolean)).size,
+    withPhone: entries.filter((entry) => entry.phone.trim().length > 0).length,
   }), [entries]);
 
   const visibleUpdates = activityFilter === "all" ? updates : updates.filter((update) => update.event_type === activityFilter);
@@ -301,7 +304,7 @@ export default function AdminPage() {
         <p>One calm command centre for every person, partner and organisation ready to shape Eukrasia.</p>
         <div className="auth-proof-grid">
           <article><span><Icon name="shield" /></span><div><strong>Protected by Neon</strong><small>Approved-team access only</small></div></article>
-          <article><span><Icon name="globe" /></span><div><strong>People first</strong><small>Four clear community categories</small></div></article>
+          <article><span><Icon name="phone" /></span><div><strong>Direct contact</strong><small>Reach people by phone or email</small></div></article>
           <article><span><Icon name="activity" /></span><div><strong>Built for action</strong><small>Track every follow-up clearly</small></div></article>
         </div>
       </div>
@@ -357,13 +360,13 @@ export default function AdminPage() {
           <article><span className="metric-icon blue"><Icon name="people" /></span><div><small>Total registrations</small><strong>{entries.length}</strong><p>All captured contacts</p></div></article>
           <article><span className="metric-icon cyan"><Icon name="spark" /></span><div><small>New leads</small><strong>{counts.new}</strong><p>Ready for review</p></div></article>
           <article><span className="metric-icon violet"><Icon name="activity" /></span><div><small>Progressing</small><strong>{counts.contacted + counts.qualified}</strong><p>Contacted or qualified</p></div></article>
-          <article><span className="metric-icon gold"><Icon name="globe" /></span><div><small>Community groups</small><strong>{counts.groups}</strong><p>Different perspectives</p></div></article>
+          <article><span className="metric-icon gold"><Icon name="phone" /></span><div><small>Phone numbers</small><strong>{counts.withPhone}</strong><p>Ready for direct follow-up</p></div></article>
         </section>
 
         <section className="records-panel" id="registrations">
           <div className="records-heading"><div><p className="form-kicker">Community directory</p><h2>Waitlist registrations</h2><span>{filteredEntries.length} of {entries.length} records</span></div><button className="export-button" type="button" onClick={() => void downloadSpreadsheet()} disabled={exporting}><Icon name="download" size={16} />{exporting ? "Preparing workbook…" : "Download Excel"}</button></div>
           <div className="records-toolbar">
-            <label className="admin-search"><Icon name="search" size={17} /><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, email, category or notes…" /><kbd>Ctrl K</kbd></label>
+            <label className="admin-search"><Icon name="search" size={17} /><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, email, phone or notes…" /><kbd>Ctrl K</kbd></label>
             <label className="filter-select"><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label>
           </div>
           {notice && <p className="dashboard-notice success">{notice}</p>}{error && <p className="dashboard-notice error">{error}</p>}
@@ -372,14 +375,14 @@ export default function AdminPage() {
             <div className="empty-illustration"><span><Icon name="people" size={26} /></span><i /><i /><i /></div>
             <p className="form-kicker">Ready for your community</p>
             <h3>{entries.length === 0 ? "The command centre is ready" : "No registrations match that filter"}</h3>
-            <p>{entries.length === 0 ? "As people join the waitlist, their name, email and community category will appear here." : "Try another search term or switch the status filter to see more records."}</p>
+            <p>{entries.length === 0 ? "As people join the waitlist, their name, email and phone number will appear here." : "Try another search term or switch the status filter to see more records."}</p>
             {entries.length === 0 && <div className="empty-steps"><span><b>1</b>Share the public waitlist</span><span><b>2</b>Review new registrations</span><span><b>3</b>Export or follow up</span></div>}
             {entries.length > 0 && <button onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button>}
           </div> : filteredEntries.map((entry, index) => <article className="entry-card" key={entry.id}>
             <div className="entry-number">{String(index + 1).padStart(2, "0")}</div>
             <div className="entry-main">
               <div className="entry-title"><div><span className={`status-pill status-${entry.status}`}>{titleCase(entry.status)}</span><h3>{entry.full_name}</h3><a href={`mailto:${entry.email}`}>{entry.email}</a></div><time><Icon name="clock" size={14} />{new Date(entry.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time><ContactAction entry={entry} /></div>
-              <dl className="entry-summary"><div><dt>Joining as</dt><dd>{entry.audience === "organization" ? "Organisation" : entry.audience === "healthcare" ? "Healthcare" : entry.audience === "partner" ? "Potential partner" : "Individual / other"}</dd></div></dl>
+              <dl className="entry-summary"><div><dt>Phone number</dt><dd>{entry.phone ? <a href={`tel:${entry.phone.replace(/[^\d+]/g, "")}`}>{entry.phone}</a> : <span className="missing-phone">Not provided by this earlier signup</span>}</dd></div></dl>
               <div className="manage-row"><label>Status<select value={entry.status} onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, status: event.target.value } : item))}>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label><label>Internal note<input value={entry.internal_note} maxLength={2000} placeholder="Add a private follow-up note…" onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, internal_note: event.target.value } : item))} /></label><button className="save-record" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void update(entry)}>{savingEntryId === entry.id ? "Saving changes…" : "Save changes"}</button><button className="danger" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void remove(entry)}>{deletingEntryId === entry.id ? "Deleting…" : "Delete"}</button></div>
             </div>
           </article>)}</div>

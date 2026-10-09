@@ -12,6 +12,7 @@ const iconPaths = {
   lock: "M6 11V8a6 6 0 0 1 12 0v3 M5 11h14v10H5z M12 15v2",
   check: "m5 12 4 4L19 6",
   globe: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M2 12h20 M12 2a15 15 0 0 1 0 20 M12 2a15 15 0 0 0 0 20",
+  phone: "M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 8.9a16 16 0 0 0 6 6l1.2-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.8 2.1Z",
 } as const;
 
 function Icon({ name, size = 18 }: { name: keyof typeof iconPaths; size?: number }) {
@@ -49,6 +50,7 @@ function CarePreview() {
 export default function WaitlistPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [formProgress, setFormProgress] = useState(0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,6 +74,7 @@ export default function WaitlistPage() {
       setStatus("success");
       setMessage("You’re on the list. We’ll be in touch as Eukrasia gets ready to launch.");
       form.reset();
+      setFormProgress(0);
     } catch {
       setStatus("error");
       setMessage("We couldn’t reach the server. Check your connection and try again.");
@@ -147,7 +150,7 @@ export default function WaitlistPage() {
           </details>
           <details>
             <summary><span>What should I include in the waitlist form?</span><i aria-hidden="true" /></summary>
-            <p>Just your name, email and the group you best identify with. We’ll use them to share relevant Eukrasia updates.</p>
+            <p>Just your name, email and phone number. We’ll use them to share Eukrasia updates and reach you about early access.</p>
           </details>
           <details>
             <summary><span>When will Eukrasia be available?</span><i aria-hidden="true" /></summary>
@@ -158,32 +161,43 @@ export default function WaitlistPage() {
 
       <section className="signup-section journal-signup" id="join">
         <div className="signup-intro">
-          <p className="eyebrow2"><span className="eyebrow-dot" />BE PART OF WHAT COMES NEXT</p>
-          <h2>Help shape a better health helper.</h2>
-          <p>Three quick details. We’ll keep you in the loop as Eukrasia takes shape.</p>
-          <div className="signup-promise"><span><Icon name="lock" size={16} /></span><p><strong>Your details stay yours.</strong><br />We’ll use them to contact you about Eukrasia. You can ask us to delete them at any time.</p></div>
+          <p className="eyebrow2"><span className="eyebrow-dot" />THE NEXT CHAPTER STARTS HERE</p>
+          <h2>Good care begins with being heard.</h2>
+          <p className="signup-lede">We're building a calmer first step for everyday health questions. Add your details to be among the first to hear what's next.</p>
+          <div className="signup-signal-card" aria-label="Eukrasia early list invitation">
+            <div className="signal-orbit"><span className="signal-core"><Icon name="pulse" size={23} /></span><i /><i /><i /></div>
+            <div className="signal-card-copy"><small>YOUR INVITATION TO</small><strong>A more thoughtful<br />health conversation.</strong><span>One small step. A clearer beginning.</span></div>
+            <span className="signal-card-index">EU<br /><b>01</b></span>
+            <div className="signal-card-base"><span><i /> EARLY LIST OPEN</span><span>YOUR DETAILS STAY PRIVATE</span></div>
+          </div>
+          <div className="signup-promise"><span><Icon name="lock" size={16} /></span><p><strong>Your details stay yours.</strong><br />We'll use them only for Eukrasia updates. You can ask us to delete them at any time.</p></div>
         </div>
-        <form className="waitlist-form" onSubmit={submit}>
-          <div className="form-heading"><span>YOUR PLACE IN THE STORY</span><small>Just three details</small></div>
+        <form className={`waitlist-form ${status === "success" ? "is-success" : ""}`} onSubmit={submit} onChange={(event) => {
+          const values = new FormData(event.currentTarget);
+          const emailInput = event.currentTarget.elements.namedItem("email");
+          const complete = [
+            String(values.get("fullName") ?? "").trim().length >= 2,
+            emailInput instanceof HTMLInputElement && emailInput.validity.valid,
+            String(values.get("phone") ?? "").replace(/\D/g, "").length >= 7,
+          ].filter(Boolean).length;
+          setFormProgress(complete);
+        }}>
+          <div className="form-heading"><span>YOUR PLACE IN THE STORY</span><span className="form-step-readout">{String(formProgress).padStart(2, "0")} <i>/</i> 03 COMPLETE</span></div>
+          <div className="signup-progress" aria-label={`${formProgress} of 3 signup details complete`}>
+            {[0, 1, 2].map((step) => <span className={formProgress > step ? "complete" : ""} key={step}><i /></span>)}
+            <small>{formProgress === 3 ? "YOU'RE ALL SET" : formProgress === 0 ? "THREE QUICK DETAILS" : "YOU'RE ON YOUR WAY"}</small>
+          </div>
           <div className="field-grid waitlist-fields">
-            <label className="signup-field">Your name<input name="fullName" required minLength={2} maxLength={120} autoComplete="name" placeholder="How should we address you?" /></label>
-            <label className="signup-field">Your email<input name="email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" /></label>
-            <fieldset className="audience-field wide">
-              <legend>Which best describes you?</legend>
-              <div className="audience-options">
-                <label><input name="audience" type="radio" value="individual" required /><span className="audience-symbol">✳</span><span><strong>Individual / other</strong><small>Exploring for myself</small></span><i aria-hidden="true">✓</i></label>
-                <label><input name="audience" type="radio" value="healthcare" /><span className="audience-symbol">＋</span><span><strong>Healthcare</strong><small>Clinician or care worker</small></span><i aria-hidden="true">✓</i></label>
-                <label><input name="audience" type="radio" value="organization" /><span className="audience-symbol">▦</span><span><strong>Organisation</strong><small>Team, NGO or institution</small></span><i aria-hidden="true">✓</i></label>
-                <label><input name="audience" type="radio" value="partner" /><span className="audience-symbol">↗</span><span><strong>Potential partner</strong><small>Interested in working together</small></span><i aria-hidden="true">✓</i></label>
-              </div>
-            </fieldset>
+            <label className="signup-field signup-name"><span><i>01</i> Your name</span><input name="fullName" required minLength={2} maxLength={120} autoComplete="name" placeholder="How should we address you?" /><small>First name or full name, whatever feels right.</small></label>
+            <label className="signup-field signup-email"><span><i>02</i> Email address</span><input name="email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" /><small>Where we'll send your Eukrasia updates.</small></label>
+            <label className="signup-field signup-phone"><span><i>03</i> Phone number</span><div className="phone-input-wrap"><span className="phone-prefix"><Icon name="phone" size={17} /><i>+</i></span><input name="phone" type="tel" inputMode="tel" required minLength={7} maxLength={32} autoComplete="tel" placeholder="234 800 000 0000" /></div><small>Include your country code so we can reach you.</small></label>
             <label className="honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <label className="consent2 wide"><input name="consent" type="checkbox" required /><span>I agree that Eukrasia may store these contact details and reach out about early access, launch updates, pilots, or partnerships. I can request deletion at any time.</span></label>
           </div>
           <button className="submit-btn2" type="submit" disabled={status === "sending"}>
-            {status === "sending" ? "Saving your place…" : <>Join the waitlist <Icon name="arrow" size={17} /></>}
+            {status === "sending" ? <><span className="button-spinner" /> Saving your place...</> : <>Save my place <Icon name="arrow" size={17} /></>}
           </button>
-          {message && <p className={`form-message2 ${status}`} role="status">{message}</p>}
+          {message && <p className={`form-message2 ${status}`} role="status"><span className="form-message-icon">{status === "success" ? <Icon name="check" size={17} /> : "!"}</span>{message}</p>}
           <p className="privacy-note2"><Icon name="lock" size={13} /> No spam. Just relevant Eukrasia updates.</p>
         </form>
       </section>

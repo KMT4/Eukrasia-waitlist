@@ -16,9 +16,9 @@ export async function POST(request: Request) {
     await sql`
       with added as (
         insert into public.waitlist_entries (
-        full_name, email, audience, source, consent_version, consented_at
+        full_name, email, phone, source, consent_version, consented_at
         ) values (
-        ${entry.fullName}, ${entry.email}, ${entry.audience},
+        ${entry.fullName}, ${entry.email}, ${entry.phone},
         'website', '2026-10', now()
         )
         on conflict (lower(email)) do nothing

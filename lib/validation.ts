@@ -1,8 +1,6 @@
 export const WAITLIST_STATUSES = ["new", "contacted", "qualified", "invited", "archived"] as const;
 export type WaitlistStatus = (typeof WAITLIST_STATUSES)[number];
 
-export const AUDIENCES = ["individual", "healthcare", "organization", "partner"] as const;
-
 function text(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -12,7 +10,7 @@ export function validateWaitlistSubmission(body: unknown) {
   const value = body as Record<string, unknown>;
   const fullName = text(value.fullName, 120);
   const email = text(value.email, 254).toLowerCase();
-  const audience = text(value.audience, 40);
+  const phone = text(value.phone, 32);
   const website = text(value.website, 200);
   const consent = value.consent === true;
 
@@ -20,13 +18,14 @@ export function validateWaitlistSubmission(body: unknown) {
   if (fullName.length < 2) return { ok: false as const, message: "Please enter your full name." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { ok: false as const, message: "Please enter a valid email address." };
-  if (!AUDIENCES.includes(audience as (typeof AUDIENCES)[number]))
-    return { ok: false as const, message: "Please tell us how you are joining." };
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (!/^\+?[0-9\s().-]+$/.test(phone) || phoneDigits.length < 7 || phoneDigits.length > 15)
+    return { ok: false as const, message: "Please enter a valid phone number, including your country code." };
   if (!consent) return { ok: false as const, message: "Consent is required to join the waitlist." };
 
   return {
     ok: true as const,
     spam: false as const,
-    data: { fullName, email, audience },
+    data: { fullName, email, phone },
   };
 }
