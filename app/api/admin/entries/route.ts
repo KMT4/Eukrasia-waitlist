@@ -24,10 +24,8 @@ export async function GET(request: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const sql = database();
   const entries = await sql`
-    select id, full_name, email, phone, country_name, audience, organization_name,
-      journey_interest, preferred_contact, preferred_language, message, source,
-      consent_version, consented_at, status, internal_note, last_contacted_at,
-      created_at, updated_at
+    select id, full_name, email, audience, source, consent_version, consented_at,
+      status, internal_note, created_at, updated_at
     from public.waitlist_entries
     order by created_at desc
     limit 10000
@@ -39,14 +37,7 @@ export async function GET(request: Request) {
         { key: "id", header: "Record ID", width: 38 },
         { key: "full_name", header: "Full name", width: 25 },
         { key: "email", header: "Email address", width: 34 },
-        { key: "phone", header: "Phone / WhatsApp", width: 20 },
-        { key: "country_name", header: "Country or region", width: 20 },
         { key: "audience", header: "Joining as", width: 24 },
-        { key: "organization_name", header: "Organisation", width: 28 },
-        { key: "journey_interest", header: "Main interest", width: 32 },
-        { key: "preferred_contact", header: "Preferred contact", width: 21 },
-        { key: "preferred_language", header: "Preferred language", width: 21 },
-        { key: "message", header: "Message", width: 44 },
         { key: "source", header: "Signup source", width: 17 },
         { key: "consent_version", header: "Consent version", width: 18 },
         { key: "consented_at", header: "Consent date", width: 23 },
@@ -148,9 +139,7 @@ export async function GET(request: Request) {
 
   if (new URL(request.url).searchParams.get("format") === "csv") {
     const keys = Object.keys(entries[0] ?? {
-      id: "", full_name: "", email: "", phone: "", country_name: "", audience: "",
-      organization_name: "", journey_interest: "", preferred_contact: "",
-      preferred_language: "", message: "", source: "", consent_version: "",
+      id: "", full_name: "", email: "", audience: "", source: "", consent_version: "",
       consented_at: "", status: "", internal_note: "", last_contacted_at: "",
       created_at: "", updated_at: "",
     });

@@ -16,14 +16,10 @@ export async function POST(request: Request) {
     await sql`
       with added as (
         insert into public.waitlist_entries (
-        full_name, email, phone, country_name, audience, organization_name,
-        journey_interest, preferred_contact, preferred_language, message,
-        source, consent_version, consented_at
+        full_name, email, audience, source, consent_version, consented_at
         ) values (
-        ${entry.fullName}, ${entry.email}, ${entry.phone}, ${entry.country},
-        ${entry.audience}, ${entry.organization}, ${entry.interest},
-        ${entry.preferredContact}, ${entry.preferredLanguage}, ${entry.message},
-        'website', '2026-09', now()
+        ${entry.fullName}, ${entry.email}, ${entry.audience},
+        'website', '2026-10', now()
         )
         on conflict (lower(email)) do nothing
         returning id

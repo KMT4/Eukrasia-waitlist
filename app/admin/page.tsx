@@ -9,14 +9,7 @@ type Entry = {
   id: string;
   full_name: string;
   email: string;
-  phone: string;
-  country_name: string;
   audience: string;
-  organization_name: string;
-  journey_interest: string;
-  preferred_contact: string;
-  preferred_language: string;
-  message: string;
   source: string;
   consent_version: string;
   consented_at: string;
@@ -95,23 +88,10 @@ function activityDescription(update: ActivityUpdate, entries: Entry[]) {
   return `${subject}: ${changes.join("; ") || "record reviewed with no changes"}.`;
 }
 
-function preferredContact(entry: Entry) {
-  const phone = entry.phone.replace(/\D/g, "");
-  if (entry.preferred_contact === "whatsapp" && phone) {
-    const text = encodeURIComponent(`Hello ${entry.full_name}, I'm reaching out from Eukrasia about your waitlist registration.`);
-    return { href: `https://wa.me/${phone}?text=${text}`, label: "Message on WhatsApp", shortLabel: "WhatsApp", external: true };
-  }
-  if (entry.preferred_contact === "phone" && phone) {
-    return { href: `tel:${phone}`, label: `Call ${entry.full_name}`, shortLabel: "Call", external: false };
-  }
-  return { href: `mailto:${encodeURIComponent(entry.email)}`, label: `Email ${entry.full_name}`, shortLabel: "Email", external: false };
-}
-
 function ContactAction({ entry }: { entry: Entry }) {
-  const contact = preferredContact(entry);
-  return <a className="contact-action" href={contact.href} aria-label={contact.label} target={contact.external ? "_blank" : undefined} rel={contact.external ? "noreferrer" : undefined}>
-    <Icon name={contact.shortLabel === "Email" ? "mail" : "arrow"} size={15} />
-    <span>{contact.shortLabel}</span>
+  return <a className="contact-action" href={`mailto:${encodeURIComponent(entry.email)}`} aria-label={`Email ${entry.full_name}`}>
+    <Icon name="mail" size={15} />
+    <span>Email</span>
   </a>;
 }
 
@@ -179,9 +159,7 @@ export default function AdminPage() {
     return entries.filter((entry) => {
       const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
       const searchable = [
-        entry.full_name, entry.email, entry.phone, entry.country_name, entry.organization_name,
-        entry.audience, entry.journey_interest, entry.preferred_contact, entry.preferred_language,
-        entry.message, entry.internal_note, entry.source, entry.status,
+        entry.full_name, entry.email, entry.audience, entry.internal_note, entry.source, entry.status,
       ].join(" ").toLowerCase();
       return matchesStatus && (!needle || searchable.includes(needle));
     });
@@ -191,7 +169,7 @@ export default function AdminPage() {
     new: entries.filter((entry) => entry.status === "new").length,
     contacted: entries.filter((entry) => entry.status === "contacted").length,
     qualified: entries.filter((entry) => entry.status === "qualified" || entry.status === "invited").length,
-    countries: new Set(entries.map((entry) => entry.country_name).filter(Boolean)).size,
+    groups: new Set(entries.map((entry) => entry.audience).filter(Boolean)).size,
   }), [entries]);
 
   const visibleUpdates = activityFilter === "all" ? updates : updates.filter((update) => update.event_type === activityFilter);
@@ -323,7 +301,7 @@ export default function AdminPage() {
         <p>One calm command centre for every person, partner and organisation ready to shape Eukrasia.</p>
         <div className="auth-proof-grid">
           <article><span><Icon name="shield" /></span><div><strong>Protected by Neon</strong><small>Approved-team access only</small></div></article>
-          <article><span><Icon name="globe" /></span><div><strong>Global-ready</strong><small>Languages and regions captured</small></div></article>
+          <article><span><Icon name="globe" /></span><div><strong>People first</strong><small>Four clear community categories</small></div></article>
           <article><span><Icon name="activity" /></span><div><strong>Built for action</strong><small>Track every follow-up clearly</small></div></article>
         </div>
       </div>
@@ -379,13 +357,13 @@ export default function AdminPage() {
           <article><span className="metric-icon blue"><Icon name="people" /></span><div><small>Total registrations</small><strong>{entries.length}</strong><p>All captured contacts</p></div></article>
           <article><span className="metric-icon cyan"><Icon name="spark" /></span><div><small>New leads</small><strong>{counts.new}</strong><p>Ready for review</p></div></article>
           <article><span className="metric-icon violet"><Icon name="activity" /></span><div><small>Progressing</small><strong>{counts.contacted + counts.qualified}</strong><p>Contacted or qualified</p></div></article>
-          <article><span className="metric-icon gold"><Icon name="globe" /></span><div><small>Countries</small><strong>{counts.countries}</strong><p>Global community reach</p></div></article>
+          <article><span className="metric-icon gold"><Icon name="globe" /></span><div><small>Community groups</small><strong>{counts.groups}</strong><p>Different perspectives</p></div></article>
         </section>
 
         <section className="records-panel" id="registrations">
           <div className="records-heading"><div><p className="form-kicker">Community directory</p><h2>Waitlist registrations</h2><span>{filteredEntries.length} of {entries.length} records</span></div><button className="export-button" type="button" onClick={() => void downloadSpreadsheet()} disabled={exporting}><Icon name="download" size={16} />{exporting ? "Preparing workbook…" : "Download Excel"}</button></div>
           <div className="records-toolbar">
-            <label className="admin-search"><Icon name="search" size={17} /><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, email, phone, notes, interests…" /><kbd>Ctrl K</kbd></label>
+            <label className="admin-search"><Icon name="search" size={17} /><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, email, category or notes…" /><kbd>Ctrl K</kbd></label>
             <label className="filter-select"><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label>
           </div>
           {notice && <p className="dashboard-notice success">{notice}</p>}{error && <p className="dashboard-notice error">{error}</p>}
@@ -394,15 +372,14 @@ export default function AdminPage() {
             <div className="empty-illustration"><span><Icon name="people" size={26} /></span><i /><i /><i /></div>
             <p className="form-kicker">Ready for your community</p>
             <h3>{entries.length === 0 ? "The command centre is ready" : "No registrations match that filter"}</h3>
-            <p>{entries.length === 0 ? "As people join the waitlist, their contact preferences and interests will appear here automatically." : "Try another search term or switch the status filter to see more records."}</p>
+            <p>{entries.length === 0 ? "As people join the waitlist, their name, email and community category will appear here." : "Try another search term or switch the status filter to see more records."}</p>
             {entries.length === 0 && <div className="empty-steps"><span><b>1</b>Share the public waitlist</span><span><b>2</b>Review new registrations</span><span><b>3</b>Export or follow up</span></div>}
             {entries.length > 0 && <button onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button>}
           </div> : filteredEntries.map((entry, index) => <article className="entry-card" key={entry.id}>
             <div className="entry-number">{String(index + 1).padStart(2, "0")}</div>
             <div className="entry-main">
               <div className="entry-title"><div><span className={`status-pill status-${entry.status}`}>{titleCase(entry.status)}</span><h3>{entry.full_name}</h3><a href={`mailto:${entry.email}`}>{entry.email}</a></div><time><Icon name="clock" size={14} />{new Date(entry.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time><ContactAction entry={entry} /></div>
-              <dl><div><dt>Country</dt><dd>{entry.country_name || "—"}</dd></div><div><dt>Audience</dt><dd>{titleCase(entry.audience)}</dd></div><div><dt>Interest</dt><dd>{titleCase(entry.journey_interest)}</dd></div><div><dt>Preferred contact</dt><dd>{titleCase(entry.preferred_contact)}{entry.phone ? ` · ${entry.phone}` : ""}</dd></div></dl>
-              {entry.organization_name && <p><strong>Organisation</strong>{entry.organization_name}</p>}{entry.message && <blockquote>&ldquo;{entry.message}&rdquo;</blockquote>}
+              <dl className="entry-summary"><div><dt>Joining as</dt><dd>{entry.audience === "organization" ? "Organisation" : entry.audience === "healthcare" ? "Healthcare" : entry.audience === "partner" ? "Potential partner" : "Individual / other"}</dd></div></dl>
               <div className="manage-row"><label>Status<select value={entry.status} onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, status: event.target.value } : item))}>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label><label>Internal note<input value={entry.internal_note} maxLength={2000} placeholder="Add a private follow-up note…" onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, internal_note: event.target.value } : item))} /></label><button className="save-record" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void update(entry)}>{savingEntryId === entry.id ? "Saving changes…" : "Save changes"}</button><button className="danger" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void remove(entry)}>{deletingEntryId === entry.id ? "Deleting…" : "Delete"}</button></div>
             </div>
           </article>)}</div>

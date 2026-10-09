@@ -2,12 +2,6 @@
 
 import { FormEvent, useState } from "react";
 
-const languages: [string, string][] = [
-  ["en", "English"],
-  ["yo", "Yorùbá"],
-  ["ha", "Hausa"],
-];
-
 const iconPaths = {
   heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z",
   arrow: "M5 12h14M13 6l6 6-6 6",
@@ -141,7 +135,7 @@ export default function WaitlistPage() {
           </details>
           <details>
             <summary><span>Who is Eukrasia for?</span><i aria-hidden="true" /></summary>
-            <p>The waitlist is open to individuals, healthcare professionals, community health workers, organisations and potential partners. We want to learn what would make a general health helper useful and responsible for the people it serves.</p>
+            <p>The waitlist is open to individuals, healthcare professionals, organisations and potential partners. We want to learn what would make a general health helper useful and responsible for the people it serves.</p>
           </details>
           <details>
             <summary><span>Will Eukrasia diagnose or replace a clinician?</span><i aria-hidden="true" /></summary>
@@ -153,7 +147,7 @@ export default function WaitlistPage() {
           </details>
           <details>
             <summary><span>What should I include in the waitlist form?</span><i aria-hidden="true" /></summary>
-            <p>Just your contact details, country, how you’re joining and what interests you. Please don’t include symptoms or other private health information in the message field.</p>
+            <p>Just your name, email and the group you best identify with. We’ll use them to share relevant Eukrasia updates.</p>
           </details>
           <details>
             <summary><span>When will Eukrasia be available?</span><i aria-hidden="true" /></summary>
@@ -166,48 +160,23 @@ export default function WaitlistPage() {
         <div className="signup-intro">
           <p className="eyebrow2"><span className="eyebrow-dot" />BE PART OF WHAT COMES NEXT</p>
           <h2>Help shape a better health helper.</h2>
-          <p>Join the Eukrasia waitlist for early access and launch updates. Tell us a little about yourself so we can share the news that’s most useful to you.</p>
+          <p>Three quick details. We’ll keep you in the loop as Eukrasia takes shape.</p>
           <div className="signup-promise"><span><Icon name="lock" size={16} /></span><p><strong>Your details stay yours.</strong><br />We’ll use them to contact you about Eukrasia. You can ask us to delete them at any time.</p></div>
         </div>
         <form className="waitlist-form" onSubmit={submit}>
-          <div className="form-heading"><span>01 — YOUR DETAILS</span><small>Fields marked * are required</small></div>
-          <div className="field-grid">
-            <label>Full name *<input name="fullName" required minLength={2} maxLength={120} autoComplete="name" placeholder="Your name" /></label>
-            <label>Email address *<input name="email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" /></label>
-            <label>Phone or WhatsApp<input name="phone" maxLength={32} placeholder="+234…" autoComplete="tel" /></label>
-            <label>Country or region *<input name="country" required minLength={2} maxLength={100} autoComplete="country-name" placeholder="Where are you based?" /></label>
-            <label>I’m joining as *
-              <select name="audience" required defaultValue="">
-                <option value="" disabled>Select one</option>
-                <option value="individual">An individual</option>
-                <option value="healthcare">A healthcare professional</option>
-                <option value="chw">A community health worker</option>
-                <option value="institution">An organisation, NGO, or insurer</option>
-                <option value="partner">A potential partner</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label>What interests you most? *
-              <select name="interest" required defaultValue="">
-                <option value="" disabled>Select one</option>
-                <option value="early-access">Early access to Eukrasia</option>
-                <option value="healthcare-partnership">Healthcare partnership</option>
-                <option value="institutional-partnership">Institutional partnership</option>
-                <option value="chw-programme">Community health worker programme</option>
-                <option value="launch-updates">Launch updates</option>
-              </select>
-            </label>
-            <label className="wide">Organisation <span className="optional-label">Optional</span><input name="organization" maxLength={160} autoComplete="organization" placeholder="Organisation name" /></label>
-            <label>Preferred contact
-              <select name="preferredContact" defaultValue="email"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="phone">Phone call</option></select>
-            </label>
-            <label>Preferred language
-              <select name="preferredLanguage" defaultValue="en">{languages.map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select>
-            </label>
-            <label className="wide">Anything you’d like us to know? <span className="optional-label">Optional</span>
-              <textarea name="message" maxLength={1000} rows={3} placeholder="What would make a health helper useful to you?" />
-              <small>Please don’t include symptoms or other private health information.</small>
-            </label>
+          <div className="form-heading"><span>YOUR PLACE IN THE STORY</span><small>Just three details</small></div>
+          <div className="field-grid waitlist-fields">
+            <label className="signup-field">Your name<input name="fullName" required minLength={2} maxLength={120} autoComplete="name" placeholder="How should we address you?" /></label>
+            <label className="signup-field">Your email<input name="email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" /></label>
+            <fieldset className="audience-field wide">
+              <legend>Which best describes you?</legend>
+              <div className="audience-options">
+                <label><input name="audience" type="radio" value="individual" required /><span className="audience-symbol">✳</span><span><strong>Individual / other</strong><small>Exploring for myself</small></span><i aria-hidden="true">✓</i></label>
+                <label><input name="audience" type="radio" value="healthcare" /><span className="audience-symbol">＋</span><span><strong>Healthcare</strong><small>Clinician or care worker</small></span><i aria-hidden="true">✓</i></label>
+                <label><input name="audience" type="radio" value="organization" /><span className="audience-symbol">▦</span><span><strong>Organisation</strong><small>Team, NGO or institution</small></span><i aria-hidden="true">✓</i></label>
+                <label><input name="audience" type="radio" value="partner" /><span className="audience-symbol">↗</span><span><strong>Potential partner</strong><small>Interested in working together</small></span><i aria-hidden="true">✓</i></label>
+              </div>
+            </fieldset>
             <label className="honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
             <label className="consent2 wide"><input name="consent" type="checkbox" required /><span>I agree that Eukrasia may store these contact details and reach out about early access, launch updates, pilots, or partnerships. I can request deletion at any time.</span></label>
           </div>
