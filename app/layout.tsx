@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Eukrasia — Join the waitlist",
+  title: "Eukrasia | Your health, understood",
   description:
-    "Reserve early access to Eukrasia, an AI-powered health companion for everyday health, wellbeing, and travel.",
+    "Join the Eukrasia waitlist. A thoughtful health companion being built to help you understand how you feel and feel more prepared for your next step in care.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

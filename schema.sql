@@ -33,7 +33,7 @@ create table if not exists public.waitlist_admin_events (
   id bigserial primary key,
   entry_id uuid,
   actor_email text not null,
-  event_type text not null check (event_type in ('updated','deleted','exported')),
+  event_type text not null check (event_type in ('joined','updated','deleted','exported')),
   details jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
@@ -44,7 +44,7 @@ alter table public.waitlist_admin_events
   drop constraint if exists waitlist_admin_events_event_type_check;
 alter table public.waitlist_admin_events
   add constraint waitlist_admin_events_event_type_check
-  check (event_type in ('updated','deleted','exported'));
+  check (event_type in ('joined','updated','deleted','exported'));
 
 create index if not exists waitlist_admin_events_created_at_idx
   on public.waitlist_admin_events (created_at desc);

@@ -14,17 +14,26 @@ export async function POST(request: Request) {
     const sql = database();
     const entry = validated.data;
     await sql`
-      insert into public.waitlist_entries (
+      with added as (
+        insert into public.waitlist_entries (
         full_name, email, phone, country_name, audience, organization_name,
         journey_interest, preferred_contact, preferred_language, message,
         source, consent_version, consented_at
-      ) values (
+        ) values (
         ${entry.fullName}, ${entry.email}, ${entry.phone}, ${entry.country},
         ${entry.audience}, ${entry.organization}, ${entry.interest},
         ${entry.preferredContact}, ${entry.preferredLanguage}, ${entry.message},
         'website', '2026-09', now()
+        )
+        on conflict (lower(email)) do nothing
+        returning id
+      ), logged as (
+        insert into public.waitlist_admin_events (entry_id, actor_email, event_type, details)
+        select id, 'waitlist', 'joined', jsonb_build_object('source', 'website')
+        from added
+        returning entry_id
       )
-      on conflict (lower(email)) do nothing
+      select added.id from added join logged on logged.entry_id = added.id
     `;
 
     return NextResponse.json({ success: true });

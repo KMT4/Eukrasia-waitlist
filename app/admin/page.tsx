@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth/client";
 import "./admin.css";
 
@@ -17,6 +17,9 @@ type Entry = {
   preferred_contact: string;
   preferred_language: string;
   message: string;
+  source: string;
+  consent_version: string;
+  consented_at: string;
   status: string;
   internal_note: string;
   last_contacted_at: string | null;
@@ -28,7 +31,7 @@ type ActivityUpdate = {
   id: string;
   entry_id: string | null;
   actor_email: string;
-  event_type: "updated" | "deleted" | "exported";
+  event_type: "joined" | "updated" | "deleted" | "exported";
   details: {
     from_status?: string;
     to_status?: string;
@@ -36,6 +39,8 @@ type ActivityUpdate = {
     status_changed?: boolean;
     note_changed?: boolean;
     record_count?: number;
+    format?: string;
+    full_name?: string;
   };
   created_at: string;
 };
@@ -68,23 +73,57 @@ const statusOptions = ["new", "contacted", "qualified", "invited", "archived"];
 const titleCase = (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1) : "—";
 
 function activityDescription(update: ActivityUpdate, entries: Entry[]) {
+  if (update.event_type === "joined") {
+    const entry = entries.find((item) => item.id === update.entry_id);
+    return `${entry?.full_name ?? "A new person"} joined the Eukrasia waitlist.`;
+  }
   if (update.event_type === "exported") {
-    return `Exported ${update.details.record_count ?? 0} waitlist records as CSV.`;
+    const format = update.details.format === "xlsx" ? "an Excel workbook" : "CSV";
+    return `Exported ${update.details.record_count ?? 0} waitlist records as ${format}.`;
   }
 
   const entry = entries.find((item) => item.id === update.entry_id);
-  const subject = entry?.full_name ?? `Record ${update.entry_id?.slice(0, 8) ?? "unknown"}`;
+  const subject = entry?.full_name ?? update.details.full_name ?? `Record ${update.entry_id?.slice(0, 8) ?? "unknown"}`;
   if (update.event_type === "deleted") {
     return `${subject} was permanently deleted from the waitlist.`;
   }
 
   const changes = [
-    update.details.status_changed
-      ? `status changed from ${titleCase(update.details.from_status ?? "")} to ${titleCase(update.details.to_status ?? "")}`
-      : "status confirmed",
-    update.details.note_changed ? "private note updated" : "private note confirmed",
-  ];
-  return `${subject}: ${changes.join("; ")}.`;
+    update.details.status_changed && `status changed from ${titleCase(update.details.from_status ?? "")} to ${titleCase(update.details.to_status ?? "")}`,
+    update.details.note_changed && "private note updated",
+  ].filter(Boolean);
+  return `${subject}: ${changes.join("; ") || "record reviewed with no changes"}.`;
+}
+
+function preferredContact(entry: Entry) {
+  const phone = entry.phone.replace(/\D/g, "");
+  if (entry.preferred_contact === "whatsapp" && phone) {
+    const text = encodeURIComponent(`Hello ${entry.full_name}, I'm reaching out from Eukrasia about your waitlist registration.`);
+    return { href: `https://wa.me/${phone}?text=${text}`, label: "Message on WhatsApp", shortLabel: "WhatsApp", external: true };
+  }
+  if (entry.preferred_contact === "phone" && phone) {
+    return { href: `tel:${phone}`, label: `Call ${entry.full_name}`, shortLabel: "Call", external: false };
+  }
+  return { href: `mailto:${encodeURIComponent(entry.email)}`, label: `Email ${entry.full_name}`, shortLabel: "Email", external: false };
+}
+
+function ContactAction({ entry }: { entry: Entry }) {
+  const contact = preferredContact(entry);
+  return <a className="contact-action" href={contact.href} aria-label={contact.label} target={contact.external ? "_blank" : undefined} rel={contact.external ? "noreferrer" : undefined}>
+    <Icon name={contact.shortLabel === "Email" ? "mail" : "arrow"} size={15} />
+    <span>{contact.shortLabel}</span>
+  </a>;
+}
+
+function jumpToSection(id: "overview" | "registrations" | "activity") {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const top = window.scrollY + target.getBoundingClientRect().top - 96;
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  });
+  window.history.replaceState(null, "", `#${id}`);
 }
 
 export default function AdminPage() {
@@ -92,11 +131,17 @@ export default function AdminPage() {
   const [mode, setMode] = useState<"signin" | "activate">("signin");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [updates, setUpdates] = useState<ActivityUpdate[]>([]);
+  const [activityFilter, setActivityFilter] = useState<"all" | "joined" | "exported" | "updated" | "deleted">("all");
+  const [activeSection, setActiveSection] = useState<"overview" | "registrations" | "activity">("overview");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -118,12 +163,27 @@ export default function AdminPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
   const filteredEntries = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return entries.filter((entry) => {
       const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
-      const haystack = [entry.full_name, entry.email, entry.country_name, entry.organization_name, entry.audience, entry.journey_interest].join(" ").toLowerCase();
-      return matchesStatus && (!needle || haystack.includes(needle));
+      const searchable = [
+        entry.full_name, entry.email, entry.phone, entry.country_name, entry.organization_name,
+        entry.audience, entry.journey_interest, entry.preferred_contact, entry.preferred_language,
+        entry.message, entry.internal_note, entry.source, entry.status,
+      ].join(" ").toLowerCase();
+      return matchesStatus && (!needle || searchable.includes(needle));
     });
   }, [entries, query, statusFilter]);
 
@@ -133,6 +193,15 @@ export default function AdminPage() {
     qualified: entries.filter((entry) => entry.status === "qualified" || entry.status === "invited").length,
     countries: new Set(entries.map((entry) => entry.country_name).filter(Boolean)).size,
   }), [entries]);
+
+  const visibleUpdates = activityFilter === "all" ? updates : updates.filter((update) => update.event_type === activityFilter);
+  const activityCounts = {
+    all: updates.length,
+    joined: updates.filter((update) => update.event_type === "joined").length,
+    exported: updates.filter((update) => update.event_type === "exported").length,
+    updated: updates.filter((update) => update.event_type === "updated").length,
+    deleted: updates.filter((update) => update.event_type === "deleted").length,
+  };
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -150,35 +219,95 @@ export default function AdminPage() {
         setMode("signin");
       }
       await load();
+    } catch {
+      setError(mode === "activate"
+        ? "We couldn’t reach the sign-in service. Check your connection and try again."
+        : "We couldn’t sign you in. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
+  async function downloadSpreadsheet() {
+    setError("");
+    setNotice("");
+    setExporting(true);
+    try {
+      const response = await fetch("/api/admin/entries?format=xlsx", { cache: "no-store" });
+      if (response.status === 401) {
+        setAuthenticated(false);
+        throw new Error("Your session has expired. Sign in again to export the waitlist.");
+      }
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(result.error ?? "The Excel workbook could not be created. Please try again.");
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? "eukrasia-waitlist.xlsx";
+      const auditRecorded = response.headers.get("x-eukrasia-audit") === "recorded";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setNotice(`${entries.length} waitlist ${entries.length === 1 ? "record" : "records"} downloaded as a formatted Excel workbook.`);
+      if (!auditRecorded) {
+        setError("The workbook downloaded, but its export could not be recorded in the activity history.");
+      } else {
+        await load();
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The Excel workbook could not be downloaded. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function update(entry: Entry) {
     setError(""); setNotice("");
-    const response = await fetch("/api/admin/entries", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: entry.id, status: entry.status, internalNote: entry.internal_note }) });
-    const data = (await response.json()) as { entry?: Entry; update?: ActivityUpdate; error?: string };
-    if (!response.ok || !data.entry || !data.update) {
-      setError(data.error ?? "The record could not be updated.");
-      return;
+    setSavingEntryId(entry.id);
+    try {
+      const response = await fetch("/api/admin/entries", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: entry.id, status: entry.status, internalNote: entry.internal_note }) });
+      const data = (await response.json()) as { entry?: Entry; update?: ActivityUpdate; error?: string };
+      if (!response.ok || !data.entry || !data.update) {
+        setError(data.error ?? "The record could not be updated.");
+        return;
+      }
+      setEntries((items) => items.map((item) => item.id === data.entry?.id ? data.entry : item));
+      setUpdates((items) => [data.update as ActivityUpdate, ...items].slice(0, 100));
+      setNotice(`${entry.full_name}'s changes were saved and recorded as an update.`);
+    } catch {
+      setError("We couldn’t reach the server. Your changes have not been saved.");
+    } finally {
+      setSavingEntryId(null);
     }
-    setEntries((items) => items.map((item) => item.id === data.entry?.id ? data.entry : item));
-    setUpdates((items) => [data.update as ActivityUpdate, ...items].slice(0, 100));
-    setNotice(`${entry.full_name}'s changes were saved and recorded as an update.`);
   }
 
   async function remove(entry: Entry) {
     if (!window.confirm(`Permanently delete ${entry.full_name} from the waitlist?`)) return;
-    const response = await fetch("/api/admin/entries", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: entry.id, confirmation: "DELETE" }) });
-    const data = (await response.json()) as { update?: ActivityUpdate; error?: string };
-    if (!response.ok || !data.update) {
-      setError(data.error ?? "The record could not be deleted.");
-      return;
+    setError(""); setNotice("");
+    setDeletingEntryId(entry.id);
+    try {
+      const response = await fetch("/api/admin/entries", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: entry.id, confirmation: "DELETE" }) });
+      const data = (await response.json()) as { update?: ActivityUpdate; error?: string };
+      if (!response.ok || !data.update) {
+        setError(data.error ?? "The record could not be deleted.");
+        return;
+      }
+      setEntries((items) => items.filter((item) => item.id !== entry.id));
+      setUpdates((items) => [data.update as ActivityUpdate, ...items].slice(0, 100));
+      setNotice(`${entry.full_name}'s deletion was saved in the activity history.`);
+    } catch {
+      setError("We couldn’t reach the server. The record may still be in the waitlist.");
+    } finally {
+      setDeletingEntryId(null);
     }
-    setEntries((items) => items.filter((item) => item.id !== entry.id));
-    setUpdates((items) => [data.update as ActivityUpdate, ...items].slice(0, 100));
-    setNotice(`${entry.full_name}'s deletion was saved in the activity history.`);
   }
 
   if (authenticated === null) return <main className="admin-shell"><div className="admin-loading"><span className="admin-brand-mark">E</span><strong>Eukrasia</strong><span>WAITLIST OPERATIONS</span><div className="loading-bar"><i /></div><p>Securing your workspace…</p></div></main>;
@@ -224,11 +353,11 @@ export default function AdminPage() {
       <Brand />
       <nav aria-label="Admin navigation">
         <p>Workspace</p>
-        <a className="active" href="#overview"><Icon name="grid" />Overview</a>
-        <a href="#registrations"><Icon name="people" />Registrations <span>{entries.length}</span></a>
-        <a href="#activity"><Icon name="activity" />Activity <span>{updates.length}</span></a>
+        <a className={activeSection === "overview" ? "active" : ""} href="#overview" onClick={(event) => { event.preventDefault(); setActiveSection("overview"); jumpToSection("overview"); }}><Icon name="grid" />Overview</a>
+        <a className={activeSection === "registrations" ? "active" : ""} href="#registrations" onClick={(event) => { event.preventDefault(); setActiveSection("registrations"); jumpToSection("registrations"); }}><Icon name="people" />Registrations <span>{entries.length}</span></a>
+        <a className={activeSection === "activity" ? "active" : ""} href="#activity" onClick={(event) => { event.preventDefault(); setActiveSection("activity"); jumpToSection("activity"); }}><Icon name="activity" />Activity <span>{updates.length}</span></a>
         <p>Actions</p>
-        <a href="/api/admin/entries?format=csv"><Icon name="download" />Export records</a>
+        <button className="sidebar-export" type="button" onClick={() => void downloadSpreadsheet()} disabled={exporting}><Icon name="download" />{exporting ? "Preparing workbook…" : "Export spreadsheet"}</button>
       </nav>
       <div className="sidebar-security"><span><Icon name="shield" size={17} /></span><strong>Workspace protected</strong><small>Neon Auth + encrypted data</small></div>
       <Link href="/" className="sidebar-return">Visit public waitlist <Icon name="arrow" size={15} /></Link>
@@ -237,7 +366,7 @@ export default function AdminPage() {
     <section className="admin-main">
       <header className="admin-topbar">
         <div><p>Operations dashboard</p><h1>Good to see you, Team.</h1></div>
-        <div className="topbar-actions"><span className="live-badge"><i />Live</span><button className="icon-button" aria-label="Sign out" onClick={async () => { await authClient.signOut(); setAuthenticated(false); }}><Icon name="logout" /></button></div>
+        <div className="topbar-actions"><span className="live-badge"><i />Live</span><button className="signout-button" type="button" onClick={async () => { try { await authClient.signOut(); setAuthenticated(false); } catch { setError("Sign out failed. Check your connection and try again."); } }}><Icon name="logout" size={16} /><span>Sign out</span></button></div>
       </header>
 
       <div className="admin-content" id="overview">
@@ -254,9 +383,9 @@ export default function AdminPage() {
         </section>
 
         <section className="records-panel" id="registrations">
-          <div className="records-heading"><div><p className="form-kicker">Community directory</p><h2>Waitlist registrations</h2><span>{filteredEntries.length} of {entries.length} records</span></div><a className="export-button" href="/api/admin/entries?format=csv"><Icon name="download" size={16} />Download CSV</a></div>
+          <div className="records-heading"><div><p className="form-kicker">Community directory</p><h2>Waitlist registrations</h2><span>{filteredEntries.length} of {entries.length} records</span></div><button className="export-button" type="button" onClick={() => void downloadSpreadsheet()} disabled={exporting}><Icon name="download" size={16} />{exporting ? "Preparing workbook…" : "Download Excel"}</button></div>
           <div className="records-toolbar">
-            <label className="admin-search"><Icon name="search" size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, email, country or organisation…" /></label>
+            <label className="admin-search"><Icon name="search" size={17} /><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, email, phone, notes, interests…" /><kbd>Ctrl K</kbd></label>
             <label className="filter-select"><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label>
           </div>
           {notice && <p className="dashboard-notice success">{notice}</p>}{error && <p className="dashboard-notice error">{error}</p>}
@@ -271,10 +400,10 @@ export default function AdminPage() {
           </div> : filteredEntries.map((entry, index) => <article className="entry-card" key={entry.id}>
             <div className="entry-number">{String(index + 1).padStart(2, "0")}</div>
             <div className="entry-main">
-              <div className="entry-title"><div><span className={`status-pill status-${entry.status}`}>{titleCase(entry.status)}</span><h3>{entry.full_name}</h3><a href={`mailto:${entry.email}`}>{entry.email}</a></div><time><Icon name="clock" size={14} />{new Date(entry.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time></div>
+              <div className="entry-title"><div><span className={`status-pill status-${entry.status}`}>{titleCase(entry.status)}</span><h3>{entry.full_name}</h3><a href={`mailto:${entry.email}`}>{entry.email}</a></div><time><Icon name="clock" size={14} />{new Date(entry.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time><ContactAction entry={entry} /></div>
               <dl><div><dt>Country</dt><dd>{entry.country_name || "—"}</dd></div><div><dt>Audience</dt><dd>{titleCase(entry.audience)}</dd></div><div><dt>Interest</dt><dd>{titleCase(entry.journey_interest)}</dd></div><div><dt>Preferred contact</dt><dd>{titleCase(entry.preferred_contact)}{entry.phone ? ` · ${entry.phone}` : ""}</dd></div></dl>
-              {entry.organization_name && <p><strong>Organisation</strong>{entry.organization_name}</p>}{entry.message && <blockquote>"{entry.message}"</blockquote>}
-              <div className="manage-row"><label>Status<select value={entry.status} onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, status: event.target.value } : item))}>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label><label>Internal note<input value={entry.internal_note} maxLength={2000} placeholder="Add a private follow-up note…" onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, internal_note: event.target.value } : item))} /></label><button className="save-record" onClick={() => void update(entry)}>Save changes</button><button className="danger" onClick={() => void remove(entry)}>Delete</button></div>
+              {entry.organization_name && <p><strong>Organisation</strong>{entry.organization_name}</p>}{entry.message && <blockquote>&ldquo;{entry.message}&rdquo;</blockquote>}
+              <div className="manage-row"><label>Status<select value={entry.status} onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, status: event.target.value } : item))}>{statusOptions.map((status) => <option value={status} key={status}>{titleCase(status)}</option>)}</select></label><label>Internal note<input value={entry.internal_note} maxLength={2000} placeholder="Add a private follow-up note…" onChange={(event) => setEntries((items) => items.map((item) => item.id === entry.id ? { ...item, internal_note: event.target.value } : item))} /></label><button className="save-record" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void update(entry)}>{savingEntryId === entry.id ? "Saving changes…" : "Save changes"}</button><button className="danger" type="button" disabled={savingEntryId === entry.id || deletingEntryId === entry.id} onClick={() => void remove(entry)}>{deletingEntryId === entry.id ? "Deleting…" : "Delete"}</button></div>
             </div>
           </article>)}</div>
         </section>
@@ -282,23 +411,28 @@ export default function AdminPage() {
         <section className="activity-panel" id="activity">
           <div className="activity-heading">
             <div>
-              <p className="form-kicker">Internal audit trail</p>
-              <h2>Saved updates</h2>
-              <span>Every record change, deletion and CSV export is stored in Neon.</span>
+              <p className="form-kicker">Workspace timeline</p>
+              <h2>Activity log</h2>
+              <span>Waitlist joins, record changes, deletions and spreadsheet exports saved in Neon.</span>
             </div>
-            <span className="activity-count"><Icon name="activity" size={16} />{updates.length} recent events</span>
+            <div className="activity-heading-actions"><span className="activity-count"><Icon name="activity" size={16} />{updates.length} events loaded</span><button className="activity-refresh" type="button" onClick={() => void load()}><Icon name="activity" size={15} />Refresh</button></div>
+          </div>
+          <div className="activity-filters" aria-label="Filter activity">
+            {(["all", "joined", "updated", "deleted", "exported"] as const).map((filter) => <button type="button" key={filter} className={activityFilter === filter ? "selected" : ""} onClick={() => setActivityFilter(filter)}>{titleCase(filter === "all" ? "all activity" : filter)}<span>{activityCounts[filter]}</span></button>)}
           </div>
           {updates.length === 0 ? (
-            <div className="activity-empty"><Icon name="shield" /><p>No internal updates have been recorded yet.</p></div>
+            <div className="activity-empty"><Icon name="shield" /><p>Nothing has been recorded yet. New waitlist joins and admin actions will appear here.</p></div>
+          ) : visibleUpdates.length === 0 ? (
+            <div className="activity-empty"><Icon name="activity" /><p>No {activityFilter} events in the latest 100 records.</p></div>
           ) : (
             <ol className="activity-list">
-              {updates.slice(0, 25).map((update) => (
+              {visibleUpdates.map((update) => (
                 <li key={update.id}>
                   <span className={`activity-icon activity-${update.event_type}`}>
-                    <Icon name={update.event_type === "exported" ? "download" : update.event_type === "deleted" ? "people" : "activity"} size={16} />
+                    <Icon name={update.event_type === "exported" ? "download" : update.event_type === "deleted" || update.event_type === "joined" ? "people" : "activity"} size={16} />
                   </span>
                   <div>
-                    <strong>{titleCase(update.event_type)}</strong>
+                    <strong>{update.event_type === "joined" ? "Waitlist joined" : update.event_type === "exported" ? `${(update.details.format ?? "file").toUpperCase()} export` : update.event_type === "deleted" ? "Registration deleted" : "Registration updated"}</strong>
                     <p>{activityDescription(update, entries)}</p>
                     <small>{update.actor_email} · {new Date(update.created_at).toLocaleString()}</small>
                   </div>

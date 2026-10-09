@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { neon } from "@neondatabase/serverless";
+import nextEnv from "@next/env";
+
+nextEnv.loadEnvConfig(process.cwd());
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required.");
