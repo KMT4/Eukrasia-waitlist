@@ -1,10 +1,13 @@
 .admin-brand { display:flex; align-items:center; gap:12px; }
-.admin-brand-mark { width:42px; height:42px; display:grid; place-items:center; border-radius:13px; background:linear-gradient(145deg,#53c8ff,#1f6fe5); color:#fff; font-size:20px; font-weight:800; box-shadow:0 10px 25px rgba(5,113,216,.22),inset 0 0 0 1px rgba(255,255,255,.36); }
+.admin-brand-mark { width:54px; height:54px; display:grid; place-items:center; border-radius:50%; background:#f8faf6; color:#fff; box-shadow:0 0 0 2px rgba(50,157,151,.2),0 9px 23px rgba(12,80,115,.22); }
+.admin-brand-mark.logo-window { position:relative; isolation:isolate; flex:0 0 54px; border-radius:50%; background:#f8faf6; box-shadow:0 0 0 2px rgba(50,157,151,.2),0 9px 23px rgba(12,80,115,.22); }
+.logo-window img { position:relative; inset:auto; width:100%; height:100%; max-width:none; object-fit:contain; display:block; mix-blend-mode:normal; }
 .admin-brand strong,.admin-brand small { display:block; }
 .admin-brand strong { font-size:17px; letter-spacing:-.02em; }
 .admin-brand small { font-size:8px; letter-spacing:.18em; color:#7893aa; margin-top:3px; font-weight:700; }
 .admin-shell { background:linear-gradient(145deg,#041c36,#073b6b 60%,#056b88); }
 .admin-loading .admin-brand-mark { margin:0 auto 14px; }
+.admin-loading .admin-brand-mark.logo-window { width:72px; height:72px; flex-basis:72px; }
 .admin-loading>strong { font-size:28px; }
 .admin-loading>span:not(.admin-brand-mark) { color:#75dce2; }
 .loading-bar { width:180px; height:3px; border-radius:10px; overflow:hidden; background:rgba(255,255,255,.14); margin:28px auto 18px; }
@@ -338,6 +341,7 @@
 @media(max-width:1050px) { .admin-sidebar { gap:16px; } .admin-content { padding-inline:26px; } .records-panel .entry-list { grid-template-columns:1fr; } }
 @media(max-width:850px) { .admin-app { display:flex; } .admin-sidebar { position:sticky; height:auto; min-height:65px; padding:10px 16px; flex-wrap:wrap; } .admin-sidebar nav { display:flex; order:3; flex:0 0 100%; overflow-x:auto; padding-bottom:3px; } .admin-sidebar nav a { flex:0 0 auto; padding:9px 10px; font-size:10px; } .admin-sidebar nav a span { display:none; } .admin-sidebar nav .sidebar-export { margin-left:auto; } .sidebar-return { margin-left:auto; } .admin-topbar { padding:16px 22px; } .admin-content { padding:20px 22px 36px; } .welcome-banner { min-height:220px; padding:31px; } .banner-visual { display:grid; } }
 @media(max-width:620px) { .admin-sidebar { gap:10px; } .admin-sidebar .admin-brand small { display:none; } .admin-sidebar .admin-brand-mark { width:36px; height:36px; } .admin-sidebar nav { gap:2px; } .admin-sidebar nav a { padding:8px; } .admin-sidebar nav a svg { display:none; } .admin-sidebar nav .sidebar-export { padding:8px 11px; font-size:9px; } .sidebar-return { font-size:0; } .sidebar-return svg { width:18px; height:18px; } .admin-topbar h1 { font-size:20px; } .live-badge { display:none; } .welcome-banner { min-height:0; padding:26px 22px; } .welcome-banner h2 { max-width:320px; font-size:37px; } .banner-visual { display:none; } .metric-grid { grid-template-columns:1fr 1fr; } .metric-grid article { border-bottom:1px solid #e1edf5; padding:13px; } .metric-grid article:nth-child(2) { border-right:0; } .metric-grid article:nth-child(n+3) { border-bottom:0; } .metric-grid small { font-size:8px; } .records-toolbar { grid-template-columns:1fr; } .records-heading { align-items:center; gap:8px; } .records-heading h2 { font-size:23px; } .records-heading .export-button { font-size:0!important; padding:0 13px; } .records-heading .export-button svg { flex:0 0 auto; } .records-panel .entry-card { padding:16px; } .entry-title { display:grid; grid-template-columns:1fr auto; } .entry-title>div { grid-column:1/-1; } .entry-title time { margin:0; } .contact-action { min-height:35px; padding:0 10px; } .records-panel .entry-card dl { grid-template-columns:1fr 1fr; } .manage-row { grid-template-columns:1fr 1fr; } .manage-row label:nth-child(2) { grid-column:1/-1; } .activity-heading { padding:19px; } }
+@media(max-width:620px){.admin-sidebar .admin-brand-mark.logo-window{width:46px;height:46px;flex-basis:46px}}
 
 .activity-heading-actions { display:flex; align-items:center; gap:10px; }
 .activity-refresh { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 12px; border:1px solid #d8e8f5; border-radius:11px; background:#fff; color:#176bc1; font:inherit; font-size:10px; font-weight:750; cursor:pointer; transition:background .18s,transform .18s,box-shadow .18s; }
