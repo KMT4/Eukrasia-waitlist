@@ -188,9 +188,9 @@ textarea{resize:vertical}
 .eukrasia-site .brand2-mark{width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#e5f5ed,#fff);box-shadow:0 0 0 2px rgba(50,157,151,.18),0 8px 19px rgba(19,104,113,.2)}
 .eukrasia-site .brand2 strong{font-size:17px;color:#102c49}
 .eukrasia-site .brand2 small{color:#7893aa;font-size:8px}
-.eukrasia-site .brand2-mark.logo-window{position:relative;isolation:isolate;width:clamp(40px,4.2vw,54px);height:clamp(40px,4.2vw,54px);flex:0 0 clamp(40px,4.2vw,54px);border-radius:50%;background:#f8faf6;box-shadow:0 0 0 2px rgba(50,157,151,.18),0 8px 19px rgba(19,104,113,.2)}
+.eukrasia-site .brand2-mark.logo-window{position:relative;isolation:isolate;width:clamp(40px,4.2vw,54px);height:clamp(40px,4.2vw,54px);flex:0 0 clamp(40px,4.2vw,54px);overflow:hidden;border-radius:50%;background:#f8faf6;box-shadow:0 0 0 2px rgba(50,157,151,.18),0 8px 19px rgba(19,104,113,.2)}
 .logo-window img{position:relative;inset:auto;width:100%;height:100%;max-width:none;object-fit:contain;display:block;mix-blend-mode:normal}
-.eukrasia-site .closing-mark.logo-window{position:relative;isolation:isolate;border-radius:50%;background:#f8faf6;box-shadow:0 0 0 2px rgba(50,157,151,.2),0 10px 22px rgba(19,104,113,.16)}
+.eukrasia-site .closing-mark.logo-window{position:relative;isolation:isolate;overflow:hidden;border-radius:50%;background:#f8faf6;box-shadow:0 0 0 2px rgba(50,157,151,.2),0 10px 22px rgba(19,104,113,.16)}
 .eukrasia-site .logo-window img{object-fit:contain}
 .eukrasia-site .nav-links{gap:30px;color:#526c82;font-size:12px}
 .eukrasia-site .nav-links a{transition:color .18s ease}
