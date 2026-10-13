@@ -26,7 +26,7 @@ function Icon({ name, size = 18 }: { name: keyof typeof iconPaths; size?: number
 function Brand() {
   return (
     <a href="#top" className="brand2" aria-label="Eukrasia home">
-      <span className="brand2-mark logo-window"><img src="/eukrasia-mark.svg" alt="" /></span>
+      <span className="brand2-mark logo-window"><img src="/eukrasia-mark.png" alt="" /></span>
       <span><strong>Eukrasia</strong><small>HEALTH HELPER CHATBOT</small></span>
     </a>
   );
@@ -203,7 +203,7 @@ export default function WaitlistPage() {
       </section>
 
       <section className="closing-note">
-        <span className="closing-mark logo-window"><img src="/eukrasia-mark.svg" alt="" /></span>
+        <span className="closing-mark logo-window"><img src="/eukrasia-mark.png" alt="" /></span>
         <p>Good health is built one day at a time.</p>
         <span>We’re here to help make those days feel a little clearer.</span>
       </section>

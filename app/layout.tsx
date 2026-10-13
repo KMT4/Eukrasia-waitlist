@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Eukrasia | Your health, understood",
-  icons: { icon: "/eukrasia-mark.svg" },
+  icons: { icon: "/eukrasia-mark.png" },
   description:
     "Join the Eukrasia waitlist. A thoughtful health companion being built to help you understand how you feel and feel more prepared for your next step in care.",
 };

@@ -60,7 +60,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 function Brand() {
-  return <div className="admin-brand"><span className="admin-brand-mark logo-window"><img src="/eukrasia-mark.svg" alt="" /></span><span><strong>Eukrasia</strong><small>WAITLIST OPERATIONS</small></span></div>;
+  return <div className="admin-brand"><span className="admin-brand-mark logo-window"><img src="/eukrasia-mark.png" alt="" /></span><span><strong>Eukrasia</strong><small>WAITLIST OPERATIONS</small></span></div>;
 }
 
 const statusOptions = ["new", "contacted", "qualified", "invited", "archived"];
@@ -291,7 +291,7 @@ export default function AdminPage() {
     }
   }
 
-  if (authenticated === null) return <main className="admin-shell"><div className="admin-loading"><span className="admin-brand-mark logo-window"><img src="/eukrasia-mark.svg" alt="" /></span><strong>Eukrasia</strong><span>WAITLIST OPERATIONS</span><div className="loading-bar"><i /></div><p>Securing your workspace…</p></div></main>;
+  if (authenticated === null) return <main className="admin-shell"><div className="admin-loading"><span className="admin-brand-mark logo-window"><img src="/eukrasia-mark.png" alt="" /></span><strong>Eukrasia</strong><span>WAITLIST OPERATIONS</span><div className="loading-bar"><i /></div><p>Securing your workspace…</p></div></main>;
 
   if (!authenticated) return <main className="admin-auth-page">
     <section className="auth-showcase">
